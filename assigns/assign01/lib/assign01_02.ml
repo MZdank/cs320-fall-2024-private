@@ -6,7 +6,7 @@ let sqrt x =
   counter (0)
 
 let is_prime y =
-  let counter i =
+  let rec counter i =
     if i = y then true
     else if y mod i = 0 then false
     else counter (i + 1)
@@ -17,11 +17,11 @@ let is_prime y =
 (*This is bullshit but hopefully less bullshit*)
 let nth_prime n =
   let rec count c primetest =
-    if c = n then return primetest
-    else if is_prime (primetest) then c = c + 1
-    else count(c, primetest + 1)
+    if c = n then primetest
+    else if is_prime (primetest) then c + 1
+    else count(c primetest + 1)
   in
-  count (0, 0)
+  count (0 0)
 
 (*THIS IS BULLSHIT:
 Let nth_prime n =
