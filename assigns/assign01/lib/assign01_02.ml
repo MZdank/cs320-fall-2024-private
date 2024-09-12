@@ -17,7 +17,7 @@ let is_prime y =
 let nth_prime n =
   let rec count c primetest =
     if c = n then primetest (*base case, found N primes*)
-    else if is_prime (primetest) then count (c + 1) (primetest + 1) (*found prime, add to count*)
+    else if is_prime primetest then count (c + 1) (primetest + 1) (*found prime, add to count*)
     else count c (primetest + 1) (*didn't find prime, check next number*)
   in
-  count 0 (2)
+  count 0 

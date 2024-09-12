@@ -1,3 +1,1 @@
-let to_string x =
-  if x > 1 then "one"
-  else "two"
+let to_string = string_of_int
