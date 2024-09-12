@@ -1,6 +1,6 @@
 let sqrt x =
   let rec counter i =
-    if i * i >= n then i
+    if i * i >= x then i
     else counter (i + 1)
   in
   counter (0)
