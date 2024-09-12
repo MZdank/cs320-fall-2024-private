@@ -1,1 +1,1 @@
-let nth_prime x = 0
+let nth_prime x = x + 0

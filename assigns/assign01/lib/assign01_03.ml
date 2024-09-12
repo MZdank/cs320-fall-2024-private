@@ -1,1 +1,1 @@
-let nth x = 0
+let nth x = x + 0
