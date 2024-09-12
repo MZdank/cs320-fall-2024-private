@@ -16,7 +16,6 @@ let is_prime y =
 
 let nth_prime n =
   let rec count c primetest =
-    print_endline ("Checking primetest = " ^ string_of_int primetest ^ ", c = " ^ string_of_int c);
     if c = n then primetest - 1
     else if is_prime primetest then count (c + 1) (primetest + 1) (*found prime, add to count*)
     else count c (primetest + 1) (*didn't find prime, check next number*)
