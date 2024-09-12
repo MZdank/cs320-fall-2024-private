@@ -14,20 +14,10 @@ let is_prime y =
   if y < 2 then false
   else counter (2)
 
-(*This is bullshit but hopefully less bullshit*)
 let nth_prime n =
   let rec count c primetest =
-    if c = n then primetest
-    else if is_prime (primetest) then c + 1
-    else count c (primetest + 1)
+    if c = n then primetest (*base case, found N primes*)
+    else if is_prime (primetest) then count (c + 1) (primetest + 1) (*found prime, add to count*)
+    else count c (primetest + 1) (*didn't find prime, check next number*)
   in
-  count 0 (0)
-
-(*THIS IS BULLSHIT:
-Let nth_prime n =
-  count = 0
-  primetest = 0
-  if count = n then return current_prime
-  if is_prime (primetest) then count++
-  else primetest++
-  *)
+  count 0 (2)
