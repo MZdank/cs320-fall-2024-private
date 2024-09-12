@@ -11,12 +11,13 @@ let is_prime y =
     else if y mod i = 0 then false
     else counter (i + 1)
   in
-  if y < 2 then false
+  if y <= 2 then false
   else counter (2)
 
 let nth_prime n =
   let rec count c primetest =
-    if c = n then primetest (*base case, found N primes*)
+    print_endline ("Checking primetest = " ^ string_of_int primetest ^ ", c = " ^ string_of_int c);
+    if c = n then primetest - 1
     else if is_prime primetest then count (c + 1) (primetest + 1) (*found prime, add to count*)
     else count c (primetest + 1) (*didn't find prime, check next number*)
   in
