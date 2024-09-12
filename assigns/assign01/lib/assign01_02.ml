@@ -23,10 +23,11 @@ let nth_prime n =
   in
   count (0, 0)
 
-(*THIS IS BULLSHIT:*)
+(*THIS IS BULLSHIT:
 Let nth_prime n =
   count = 0
   primetest = 0
   if count = n then return current_prime
   if is_prime (primetest) then count++
   else primetest++
+  *)
