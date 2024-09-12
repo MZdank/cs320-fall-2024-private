@@ -20,4 +20,4 @@ let nth_prime n =
     else if is_prime primetest then count (c + 1) (primetest + 1) (*found prime, add to count*)
     else count c (primetest + 1) (*didn't find prime, check next number*)
   in
-  count 0 
+  count 0 2
