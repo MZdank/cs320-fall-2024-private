@@ -19,9 +19,9 @@ let nth_prime n =
   let rec count c primetest =
     if c = n then primetest
     else if is_prime (primetest) then c + 1
-    else count(c primetest + 1)
+    else count c (primetest + 1)
   in
-  count (0 0)
+  count 0 (0)
 
 (*THIS IS BULLSHIT:
 Let nth_prime n =
