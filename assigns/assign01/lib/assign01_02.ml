@@ -1,1 +1,2 @@
-let nth_prime x = x + 0
+let rec is_prime x = 
+  if x = 
