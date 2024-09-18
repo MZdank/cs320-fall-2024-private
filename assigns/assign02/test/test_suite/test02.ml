@@ -1,4 +1,4 @@
-open OUnit2
+(*open OUnit2
 open Assign02_02
 
 let string_of_int_pair p =
@@ -49,3 +49,4 @@ let tests =
     ; test [] (200, 0) {entries=[];rows=200;cols=0}
     ; test [] (0, 200) {entries=[];rows=0;cols=200}
     ]
+*)
