@@ -47,5 +47,5 @@ let tests =
     [ test [1.;0.;0.;1.] (2, 2) id2
     ; test [1.;2.;3.;4.;5.;6.;7.;8.;9.] (3, 3) simple_matrix
     ; test [] (200, 0) {entries=[];rows=200;cols=0}
-    ; test [] (0, 200) {entries=[];rows=0;cols=200}
+; test [] (0, 200) {entries=[];rows=0;cols=200}
     ]
