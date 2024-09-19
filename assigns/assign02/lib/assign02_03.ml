@@ -29,17 +29,19 @@ let drop n l =
   (*if n < 0 then invalid_arg "List.drop";*)
   aux 0 l
 
+let rec make_move path updown leftright =
+  match path with
+  | [] -> (updown, leftright)
+  | _ ->
+    let move = take 1 path in
+    let _ = drop 1 path in
+    match move with
+      | [North] -> make_move path (updown + 1) leftright
+      | [South] -> make_move path (updown - 1) leftright
+      | [East] -> make_move path updown (leftright + 1)
+      | [West] -> make_move path updown (leftright - 1)
+      | _ -> (updown, leftright)
+
 let dist path =
-  let rec make_move path updown leftright =
-    match path with
-    | [] -> (updown, leftright)
-    | _ ->
-      let move = take 1 path in
-      drop 1 path in
-      match move with
-        | [North] -> make_move path (updown + 1) leftright
-        | [South] -> make_move path (updown - 1) leftright
-        | [East] -> make_move path updown (leftright + 1)
-        | [West] -> make_move path updown (leftright - 1)
-    let (updown, leftright) = make_move path 0 0
-    in sqrt (float_of_int ((updown) * (updown) + (leftright) * (leftright)))
+  let (updown, leftright) = make_move path 0 0 in
+  sqrt (float_of_int ((updown) * (updown) + (leftright) * (leftright)))
