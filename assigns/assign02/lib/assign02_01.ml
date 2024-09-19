@@ -49,7 +49,7 @@ let winner board =
   let is_win a b c =
     match a, b, c with
     | Piece X, Piece X, Piece X -> true
-    | Piece O, Piece O, Piece O -> false
+    | Piece O, Piece O, Piece O -> true
     |_ -> false
   in
   (*pass every row*)
