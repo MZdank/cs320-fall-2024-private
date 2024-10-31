@@ -43,6 +43,14 @@ open Utils
 %left ADD SUB
 %left MUL DIV MOD
 
+(*expr3 tokens*)
+%token LPAREN
+%token RPAREN
+%token TRUE
+%token FALSE
+%token UNIT
+
+
 %start <Utils.prog> prog
 
 %%
@@ -62,9 +70,19 @@ expr:
 expr2:
   | e1 = expr2; op = bop; e2 = expr2 
     { Bop  (op, e1, e2)}
-  | e1 = expr2; e2 = expr3;
-    { App (e1, e2)}
+  | e1 = expr3; e2 = expr2_tail {e1}
+
+expr2_tail: (*recursion!*)
+  | e = expr3; es = expr2_tail { App (e, es) }
+  | (*empty to show end of expr2_tail*) { e }
+
+(*expr2:
+  | e1 = expr2; op = bop; e2 = expr2 
+    { Bop (op, e1, e2) }
+  | e1 = expr2; e2 = expr3 
+    { App (e1, e2) }
   | e = expr3 { e }
+  *)
 
 expr3:
   | LPAREN; e = expr; RPAREN { e }
