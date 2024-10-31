@@ -1,5 +1,10 @@
 %{
 open Utils
+
+let rec mk_app e es =
+  match es with
+  | [] -> e
+  | x :: es -> mk_app (App (e, x)) es
 %}
 
 %token <int> NUM
@@ -32,16 +37,23 @@ open Utils
 %token LTE
 %token GT
 %token GTE
-%token EQ
 %token NEQ
 %token AND
 %token OR
 
+
 %right OR
 %right AND
-%left LT LTE GT GTE EQ NEQ
-%left ADD SUB
-%left MUL DIV MOD
+%left LT 
+%left LTE 
+%left GT 
+%left GTE 
+%left NEQ
+%left ADD 
+%left SUB
+%left MUL 
+%left DIV 
+%left MOD
 
 (*expr3 tokens*)
 %token LPAREN
@@ -49,6 +61,7 @@ open Utils
 %token TRUE
 %token FALSE
 %token UNIT
+
 
 
 %start <Utils.prog> prog
@@ -63,19 +76,23 @@ expr:
     { If (e, e1, e2)}
   | LET; x = VAR; EQUALS; e1 = expr; IN; e2 = expr 
     { Let (x, e1, e2) }
-  | FUN; x = VAR; ARROW; e = expr 
+  | FUN; x = VAR; ARROW; e = expr (*This is dif from lecture*)
     { Fun (x, e)}
-  | e = expr2 {e}
+  | e = expr2 { e }
 
 expr2:
   | e1 = expr2; op = bop; e2 = expr2 
     { Bop (op, e1, e2) }
-  | e1 = expr2; e2 = expr3 
-    { App (e1, e2) }
+  | e = expr3; es = expr3_list
+    { mk_app e es } (*from lecture*)
   | e = expr3 { e }
 
+expr3_list:
+  | e = expr3; es = expr3_list { e :: es }
+  | { [] }
 
 expr3:
+  | LPAREN; RPAREN { Unit }
   | LPAREN; e = expr; RPAREN { e }
   | n = NUM { Num n }
   | v = VAR { Var v }
@@ -93,7 +110,6 @@ expr3:
   | LTE { Lte }
   | GT  { Gt  }
   | GTE { Gte }
-  | EQ  { Eq }
   | NEQ { Neq }
   | AND { And }
   | OR  { Or }
