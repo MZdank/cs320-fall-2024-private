@@ -8,7 +8,7 @@ let var = ['a'-'z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_' '\'']*
 
 rule read =
   parse
-  | whitespace { read lexbuf }                  (* Skip whitespace *)
+  | whitespace { read lexbuf }
   | "let" { LET }
   | "in" { IN }
   | "if" { IF }
