@@ -35,6 +35,7 @@ let rec subst v x m =
     let m2' = if x = y then m2 else subst v x m2 in 
     Let (y, m1', m2')
 
+
 let rec eval env expr =
   let rec go = function
     | True -> Ok (VBool true)
@@ -45,11 +46,10 @@ let rec eval env expr =
       let m = go e1 in
       let n = go e2 in
       match op, m, n with
-      | Add, Ok (VNum x), Ok (VNum y) -> Ok (VNum (x + y))
-      | Sub, Ok (VNum x), Ok (VNum y) -> Ok (VNum (x - y))
-      | Mul, Ok (VNum x), Ok (VNum y) -> Ok (VNum (x * y))
       | Div, Ok (VNum x), Ok (VNum y) -> if y <> 0 then Ok (VNum (x / y)) else Error DivByZero
       | Mod, Ok (VNum x), Ok (VNum y) -> if y <> 0 then Ok (VNum (x mod y)) else Error DivByZero
+      | Sub, Ok (VNum x), Ok (VNum y) -> Ok (VNum (x - y))
+      | Mul, Ok (VNum x), Ok (VNum y) -> Ok (VNum (x * y))
       | Lt, Ok (VNum x), Ok (VNum y) -> Ok (VBool (x < y))
       | Lte, Ok (VNum x), Ok (VNum y) -> Ok (VBool (x <= y))
       | Gt, Ok (VNum x), Ok (VNum y) -> Ok (VBool (x > y))
@@ -58,7 +58,9 @@ let rec eval env expr =
       | Neq, Ok (VNum x), Ok (VNum y) -> Ok (VBool (x <> y))
       | And, Ok (VBool x), Ok (VBool y) -> Ok (VBool (x && y))
       | Or, Ok (VBool x), Ok (VBool y) -> Ok (VBool (x || y))
-      | _ -> Error InvalidIfCond )
+      | Add, Ok (VNum x), Ok (VNum y) -> Ok (VNum (x + y))
+      | _ -> Error (InvalidArgs op)
+      )
     | If (op, e2, e3) -> (
       match go op with
       | Ok (VBool true) -> go e2

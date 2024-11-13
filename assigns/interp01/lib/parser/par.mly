@@ -101,7 +101,6 @@ expr3:
   | UNIT { Unit }
 
 %inline bop:
-  | ADD { Add }
   | SUB { Sub }
   | MUL { Mul }
   | DIV { Div }
@@ -109,6 +108,7 @@ expr3:
   | EQUALS { Eq }
   | LT  { Lt  }
   | LTE { Lte }
+  | ADD { Add }
   | GT  { Gt  }
   | GTE { Gte }
   | NEQ { Neq }
