@@ -29,6 +29,12 @@ let rec subst x n m =
       let m2' = if x = y then m2 else subst x n m2 in 
       Let (y, m1', m2')
   
+let val_to_expr = function
+  | VNum n -> Num n
+  | VBool b -> if b then True else False
+  | VFun (x, e) -> Fun (x, e)
+  | VUnit -> Unit
+
 let rec eval env expr =
   let rec go = function
     | True -> Ok (VBool true)
@@ -73,7 +79,7 @@ let rec eval env expr =
       match go e1 with
       | Ok (VFun (x, body)) -> (
         match go e2 with
-        | Ok v -> eval (Env.add x v env) body
+        | Ok v -> eval env (subst x (val_to_expr v) body)
         | _ -> Error (InvalidApp)
       )
       | _ -> Error (InvalidApp)
