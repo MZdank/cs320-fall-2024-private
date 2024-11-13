@@ -35,13 +35,6 @@ let rec subst v x m =
     let m2' = if x = y then m2 else subst v x m2 in 
     Let (y, m1', m2')
 
-  
-let val_to_expr = function
-  | VNum n -> Num n
-  | VBool b -> if b then True else False
-  | VFun (x, e) -> Fun (x, e)
-  | VUnit -> Unit
-
 let rec eval env expr =
   let rec go = function
     | True -> Ok (VBool true)
