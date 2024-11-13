@@ -29,7 +29,7 @@ let rec subst x n m =
       let m2' = if x = y then m2 else subst x n m2 in 
       Let (y, m1', m2')
   
-let rec eval env =
+let rec eval env expr =
   let rec go = function
     | True -> Ok (VBool true)
     | False -> Ok (VBool false)
@@ -69,15 +69,17 @@ let rec eval env =
       | Ok v -> eval (Env.add x v env) e2
       | _ -> Error (InvalidApp)
     )
-  (*| App (m, n) -> (
-      let m = eval m in
-      let n = eval n in
-      match m with
-      | VFun (x, m) -> eval (subst x m n)
-      | _ -> Error (InvalidApp)) *)
-    | App (_, _) -> Ok VUnit
+    | App (e1, e2) -> (
+      match go e1 with
+      | Ok (VFun (x, body)) -> (
+        match go e2 with
+        | Ok v -> eval (Env.add x v env) body
+        | _ -> Error (InvalidApp)
+      )
+      | _ -> Error (InvalidApp)
+    )
     | Unit -> Ok VUnit
-  in go
+  in go expr
 
 let eval = eval Env.empty
 
