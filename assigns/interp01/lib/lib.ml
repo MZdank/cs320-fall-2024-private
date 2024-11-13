@@ -52,7 +52,7 @@ let rec eval env expr =
       | Neq, Ok (VNum x), Ok (VNum y) -> Ok (VBool (x <> y))
       | And, Ok (VBool x), Ok (VBool y) -> Ok (VBool (x && y))
       | Or, Ok (VBool x), Ok (VBool y) -> Ok (VBool (x || y))
-      | _ -> Error InvalidApp )
+      | _ -> Error InvalidIfCond )
     | If (op, e2, e3) -> (
       match go op with
       | Ok (VBool true) -> go e2
@@ -67,7 +67,7 @@ let rec eval env expr =
     | Let (x, e1, e2) -> (
       match go e1 with
       | Ok v -> eval (Env.add x v env) e2
-      | _ -> Error (InvalidApp)
+      | Error e -> Error e
     )
     | App (e1, e2) -> (
       match go e1 with
