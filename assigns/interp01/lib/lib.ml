@@ -1,33 +1,40 @@
 open Utils
 include My_parser
 
-let rec subst x n m =
+let rec subst v x m =
   match m with
   | Num _ -> m  
-  | Var y -> if x = y then n else m  
+  | Var y -> if x = y then 
+    match v with
+    | VNum n -> Num n
+    | VBool b -> if b then True else False
+    | VUnit -> Unit
+    | VFun (arg, body) -> Fun (arg, body)
+    else m  
   | Unit -> Unit  
   | True -> True  
   | False -> False 
   | Bop (op, m1, m2) -> 
-      let m1' = subst x n m1 in
-      let m2' = subst x n m2 in
-      Bop (op, m1', m2')
+    let m1' = subst v x m1 in
+    let m2' = subst v x m2 in
+    Bop (op, m1', m2')
   | If (m1, m2, m3) -> 
-      let m1' = subst x n m1 in
-      let m2' = subst x n m2 in
-      let m3' = subst x n m3 in
-      If (m1', m2', m3')
+    let m1' = subst v x m1 in
+    let m2' = subst v x m2 in
+    let m3' = subst v x m3 in
+    If (m1', m2', m3')
   | Fun (y, m0) ->  
-      if x = y then m 
-      else Fun (y, subst x n m0)
+    if x = y then m 
+    else Fun (y, subst v x m0)
   | App (m1, m2) -> 
-      let m1' = subst x n m1 in
-      let m2' = subst x n m2 in
-      App (m1', m2')
+    let m1' = subst v x m1 in
+    let m2' = subst v x m2 in
+    App (m1', m2')
   | Let (y, m1, m2) ->  
-      let m1' = subst x n m1 in
-      let m2' = if x = y then m2 else subst x n m2 in 
-      Let (y, m1', m2')
+    let m1' = subst v x m1 in
+    let m2' = if x = y then m2 else subst v x m2 in 
+    Let (y, m1', m2')
+
   
 let val_to_expr = function
   | VNum n -> Num n
@@ -78,11 +85,11 @@ let rec eval env expr =
     | App (e1, e2) -> (
       match go e1 with
       | Ok (VFun (x, body)) -> (
-        match go e2 with
-        | Ok v -> eval env (subst x (val_to_expr v) body)
-        | _ -> Error (InvalidApp)
-      )
-      | _ -> Error (InvalidApp)
+          match go e2 with
+          | Ok v -> eval env (subst v x body)
+          | _ -> Error InvalidApp
+        )
+      | _ -> Error InvalidApp
     )
     | Unit -> Ok VUnit
   in go expr
