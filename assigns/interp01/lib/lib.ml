@@ -11,9 +11,6 @@ let rec subst v x m =
     | VUnit -> Unit
     | VFun (arg, body) -> Fun (arg, body)
     else m  
-  | Unit -> Unit  
-  | True -> True  
-  | False -> False 
   | Bop (op, m1, m2) -> 
     let m1' = subst v x m1 in
     let m2' = subst v x m2 in
@@ -34,6 +31,9 @@ let rec subst v x m =
     let m1' = subst v x m1 in
     let m2' = if x = y then m2 else subst v x m2 in 
     Let (y, m1', m2')
+  | Unit -> Unit  
+  | True -> True  
+  | False -> False 
 
 
 let rec eval env expr =
@@ -61,8 +61,8 @@ let rec eval env expr =
       | Add, Ok (VNum x), Ok (VNum y) -> Ok (VNum (x + y))
       | _ -> Error (InvalidArgs op)
       )
-    | If (op, e2, e3) -> (
-      match go op with
+    | If (e1, e2, e3) -> (
+      match go e1 with
       | Ok (VBool true) -> go e2
       | Ok (VBool false) -> go e3
       | _ -> Error (InvalidIfCond)
