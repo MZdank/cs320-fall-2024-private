@@ -4,6 +4,7 @@ include My_parser
 exception AssertFail
 exception DivByZero
 
+(*Converting sfexpr to expr*)
 let rec desugar_sfexpr sfexpr =
   match sfexpr with
   | SUnit -> Unit
@@ -12,14 +13,12 @@ let rec desugar_sfexpr sfexpr =
   | SNum n -> Num n
   | SVar x -> Var x
   | SFun { arg = (arg_name, arg_ty); args; body } ->
-    (* Rule: Curry the function *)
     List.fold_right
       (fun (name, ty) acc -> Fun (name, ty, acc))
       ((arg_name, arg_ty) :: args)
       (desugar_sfexpr body)
   | SApp (f, x) -> App (desugar_sfexpr f, desugar_sfexpr x)
   | SLet { is_rec; name; args; ty; value; body } ->
-    (* Rule: Let-binding with arguments becomes curried function *)
     let desugared_value =
       if args = [] then desugar_sfexpr value
       else
@@ -39,13 +38,12 @@ let rec desugar_sfexpr sfexpr =
 let rec desugar prog =
   match prog with
   | [] -> Unit
-  | toplet :: rest ->
-    let rest_desugared = desugar rest in
-    let { is_rec; name; args; ty; value } = toplet in
+  | l :: ls ->
+    let rest_desugared = desugar ls in
+    let { is_rec; name; args; ty; value } = l in
     let desugared_value =
       if args = [] then desugar_sfexpr value
       else
-        (* Rule: Let-binding with arguments becomes curried function *)
         List.fold_right
           (fun (arg_name, arg_ty) acc -> Fun (arg_name, arg_ty, acc))
           args
@@ -74,30 +72,45 @@ let rec type_of ctxt =
         let t1 = go e1 in
         let t2 = go e2 in
         match op, t1, t2 with
-        | Add, Ok IntTy, Ok IntTy
-        | Sub, Ok IntTy, Ok IntTy
-        | Mul, Ok IntTy, Ok IntTy
-        | Div, Ok IntTy, Ok IntTy
+        | Add, Ok IntTy, Ok IntTy -> Ok IntTy
+        | Sub, Ok IntTy, Ok IntTy -> Ok IntTy
+        | Mul, Ok IntTy, Ok IntTy -> Ok IntTy
+        | Div, Ok IntTy, Ok IntTy -> Ok IntTy
         | Mod, Ok IntTy, Ok IntTy -> Ok IntTy
-        | Lt, Ok IntTy, Ok IntTy
-        | Lte, Ok IntTy, Ok IntTy
-        | Gt, Ok IntTy, Ok IntTy
-        | Gte, Ok IntTy, Ok IntTy
-        | Eq, Ok IntTy, Ok IntTy
+        | Lt, Ok IntTy, Ok IntTy -> Ok BoolTy
+        | Lte, Ok IntTy, Ok IntTy -> Ok BoolTy
+        | Gt, Ok IntTy, Ok IntTy -> Ok BoolTy
+        | Gte, Ok IntTy, Ok IntTy -> Ok BoolTy
+        | Eq, Ok IntTy, Ok IntTy -> Ok BoolTy
         | Neq, Ok IntTy, Ok IntTy -> Ok BoolTy
-        | And, Ok BoolTy, Ok BoolTy
+        | And, Ok BoolTy, Ok BoolTy -> Ok BoolTy
         | Or, Ok BoolTy, Ok BoolTy -> Ok BoolTy
-        | _ -> Error (Utils.ParseErr)
-      )
+        | _, Ok t1, Ok t2 -> (
+          match op with
+          | Add | Sub | Mul | Div | Mod when t1 <> IntTy -> Error (OpTyErrL (op, IntTy, t1))
+          | Add | Sub | Mul | Div | Mod when t2 <> IntTy -> Error (OpTyErrR (op, IntTy, t2))
+          | Lt | Lte | Gt | Gte | Eq | Neq when t1 <> IntTy -> Error (OpTyErrL (op, IntTy, t1))
+          | Lt | Lte | Gt | Gte | Eq | Neq when t2 <> IntTy -> Error (OpTyErrR (op, IntTy, t2))
+          | And | Or when t1 <> BoolTy -> Error (OpTyErrL (op, BoolTy, t1))
+          | And | Or when t2 <> BoolTy -> Error (OpTyErrR (op, BoolTy, t2))
+          | _ -> Error ParseErr
+        )
+      | _, Error err, _ -> Error err
+      | _, _, Error err -> Error err
+    )
     | If (e1, e2, e3) -> (
-      match go e1, go e2, go e3 with
-      | Ok BoolTy, Ok t2, Ok t3 when t2 = t3 -> Ok t3
-      | _ -> Error (Utils.ParseErr)
+        match go e1, go e2, go e3 with
+        | Ok BoolTy, Ok t2, Ok t3 when t2 = t3 -> Ok t3
+        | Ok BoolTy, Ok t2, Ok t3 -> Error (IfTyErr (t2, t3))
+        | Ok ty, _, _ -> Error (IfCondTyErr ty)
+        | _ -> Error (ParseErr)
     )
     | App (e1, e2) -> (
         match go e1, go e2 with
-        | Ok (FunTy (ty_arg, ty_out)), Ok t2 when ty_arg = t2 -> Ok ty_out
-        | _ -> Error (Utils.ParseErr)
+        | Ok (FunTy (ty_arg, ty_out)), Ok ty when ty = ty_arg -> Ok ty_out
+        | Ok (FunTy (ty_arg, _)), Ok ty -> Error (FunArgTyErr (ty_arg, ty))
+        | Ok ty, _ -> Error (FunAppTyErr ty)
+        | _ -> Error (ParseErr)
       )
       | Let { is_rec; name; ty; value; body } ->(
         if is_rec then
@@ -139,7 +152,7 @@ let rec eval env =
     | Num n -> (VNum n)
     | Fun (str, _, e) ->
         (VClos
-           { name = None (* No specific name for anonymous functions *)
+           { name = None 
            ; arg = str
            ; body = e
            ; env
@@ -189,8 +202,8 @@ let rec eval env =
     if is_rec then
       let closure =
         match value with
-        | Fun (param, _, body) ->
-          (VClos { name = Some name; arg = param; body; env = env })
+        | Fun (arg, _, body) ->
+          (VClos { name = Some name; arg; body; env = env })
         | _ -> raise AssertFail
       in
       begin
@@ -220,7 +233,7 @@ let interp str =
   | Some prog -> 
       let expr = desugar prog in
       match type_of expr with
-      | Error e -> Error e (* Propagate type-checking errors *)
+      | Error e -> Error e
       | Ok ty -> 
           try 
             Ok (eval expr)
