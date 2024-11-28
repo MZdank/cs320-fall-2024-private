@@ -72,6 +72,7 @@ expr2:
   | "assert" e = expr3 { SAssert(e) }
   | e = expr3 es = expr3* 
     { List.fold_left (fun e1 e2 -> SApp(e1, e2)) e es }
+  | "(" e = expr ")" { e }
 
 expr3:
   | x = VAR { SVar(x) }
@@ -100,3 +101,4 @@ arg_list:
   | LPAREN x = VAR COLON ty = ty RPAREN rest = arg_list
     { (x, ty) :: rest }
   | { [] }
+

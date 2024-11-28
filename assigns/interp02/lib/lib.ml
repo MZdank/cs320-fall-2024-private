@@ -35,23 +35,30 @@ let rec desugar_sfexpr sfexpr =
     Bop (bop, desugar_sfexpr left, desugar_sfexpr right)
   | SAssert expr -> Assert (desugar_sfexpr expr)
 
-let rec desugar prog =
-  match prog with
-  | [] -> Unit
-  | l :: ls ->
-    let rest_desugared = desugar ls in
-    let { is_rec; name; args; ty; value } = l in
-    let desugared_value =
-      if args = [] then desugar_sfexpr value
-      else
-        List.fold_right
-          (fun (arg_name, arg_ty) acc -> Fun (arg_name, arg_ty, acc))
-          args
-          (desugar_sfexpr value)
-    in
-    Let
-      { is_rec; name; ty; value = desugared_value; body = rest_desugared }
-
+  let rec desugar prog =
+    match prog with
+    | [] -> Unit
+    | l :: ls ->
+      let rest_desugared = desugar ls in
+      let { is_rec; name; args; ty; value } = l in
+      let desugared_value, desugared_ty =
+        if args = [] then desugar_sfexpr value, ty
+        else
+          let fun_ty = List.fold_right
+            (fun (_, arg_ty) acc -> Utils.FunTy (arg_ty, acc))
+            args
+            ty
+          in
+          let fun_value = List.fold_right
+            (fun (arg_name, arg_ty) acc -> Fun (arg_name, arg_ty, acc))
+            args
+            (desugar_sfexpr value)
+          in
+          fun_value, fun_ty
+      in
+      Let
+        { is_rec; name; ty = desugared_ty; value = desugared_value; body = rest_desugared }
+  
 let rec type_of ctxt =
   let rec go = function
     | Unit -> Ok UnitTy
@@ -132,7 +139,8 @@ let rec type_of ctxt =
     | Assert e -> (
         match go e with
         | Ok BoolTy -> Ok UnitTy
-        | _ -> Error (Utils.ParseErr)
+        | Ok ty -> Error (AssertTyErr ty)
+        | Error err -> Error err
       )
   in
   go
