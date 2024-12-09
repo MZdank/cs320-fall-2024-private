@@ -25,7 +25,7 @@ let rec fvs = function
 let unify =
   let rec go = function
     | [] -> None
-    | [TVar "_out", t] -> Some t (* optimization to not build a full solution *)
+    | [TVar "$_out", t] -> Some t (* optimization to not build a full solution *)
     | (t1, t2) :: cs when t1 = t2 -> go cs
     | (TFun (t1, t2), TFun (t1', t2')) :: cs ->
       go ((t1, t1') :: (t2, t2') :: cs)
@@ -37,78 +37,85 @@ let unify =
     | _ -> None
   in go
 
-let rec instantiate (fvs, t) =
-  match fvs with
-  | [] -> t
-  | x :: xs ->
-    let fresh = TVar (gensym ()) in
-    ty_subst fresh x (instantiate (xs, t))
-
-let rec type_of ctxt =
-  let rec go = function
-  | Num _ -> TInt, []
-  | Var x ->
-    let ty_scheme = Env.find x ctxt in
-    instantiate ty_scheme, []
-  | Add (e1, e2) ->
-    let t1, c1 = go e1 in
-    let t2, c2 = go e2 in
-    ( TInt
-    , (t1, TInt) :: (t2, TInt) :: c1 @ c2
-    )
-  | Eq (e1, e2) ->
-    let t1, c1 = go e1 in
-    let t2, c2 = go e2 in
-    ( TBool
-    , (t1, TInt) :: (t2, TInt) :: c1 @ c2
-    )
-  | Fun (x, e) ->
-    let fresh = TVar (gensym ()) in
-    let ctxt = Env.add x ([], fresh) ctxt in
-    let t, c = type_of ctxt e in
-    ( TFun (fresh, t)
-    , c
-    )
-  | App (e1, e2) ->
-    let t1, c1 = go e1 in
-    let t2, c2 = go e2 in
-    let fresh = TVar (gensym ()) in
-    ( fresh
-    , (t1, TFun (t2, fresh)) :: c1 @ c2
-    )
-  | If (e1, e2, e3) ->
-    let t1, c1 = go e1 in
-    let t2, c2 = go e2 in
-    let t3, c3 = go e3 in
-    ( t3
-    , (t1, TBool) :: (t2, t3) :: c1 @ c2 @ c3
-    )
-  | Let (x, e1, e2) ->
-    let t1, c1 = go e1 in
-    let t2, c2 =
-      let ctxt = Env.add x ([], t1) ctxt in
-      type_of ctxt e2
-    in (t2, c1 @ c2)
-  | LetRec (f, x, e1, e2) ->
-    let fresh1 = TVar (gensym ()) in
-    let fresh2 = TVar (gensym ()) in
-    let ctxt = Env.add f ([], TFun (fresh1, fresh2)) ctxt in
-    let t1, c1 =
-      let ctxt = Env.add x ([], fresh1) ctxt in
-      type_of ctxt e1
-    in
-    let t2, c2 = type_of ctxt e2 in
-    ( t2
-    , (fresh2, t1) :: c1 @ c2
-    )
-  in go
+let rec type_of' (ctxt : (string list * ty) env) (e : expr) : ty * (ty * ty) list =
+  let rec go e =
+    match e with
+    | Num _ -> TInt, []
+    | Add (e1, e2) ->
+      let t1, c1 = go e1 in
+      let t2, c2 = go e2 in
+      ( TInt
+      , (t1, TInt) :: (t2, TInt) :: c1 @ c2
+      )
+    | Eq (e1, e2) ->
+      let t1, c1 = go e1 in
+      let t2, c2 = go e2 in
+      ( TBool
+      , (t1, TInt) :: (t2, TInt) :: c1 @ c2
+      )
+    | If (e1, e2, e3) ->
+      let t1, c1 = go e1 in
+      let t2, c2 = go e2 in
+      let t3, c3 = go e3 in
+      ( t3
+      , [(t1, TBool); (t2, t3)] @ c1 @ c2 @ c3
+      )
+    | Fun (x, e) ->
+      let a = TVar (gensym ()) in
+      let t, c =
+        let ctxt = Env.add x ([], a) ctxt in
+        type_of' ctxt e
+      in
+      (TFun (a, t), c)
+    | App (e1, e2) ->
+      let t1, c1 = go e1 in
+      let t2, c2 = go e2 in
+      let a = TVar (gensym ()) in
+      ( a
+      , (t1, TFun (t2, a)) :: c1 @ c2
+      )
+    | Let (x, e1, e2) ->
+      let t1, c1 = go e1 in
+      let t2, c2 =
+        let ctxt = Env.add x ([], t1) ctxt in
+        type_of' ctxt e2
+      in
+      (t2, c1 @ c2)
+    | LetRec (f, x, e1, e2) ->
+      let a = TVar (gensym ()) in
+      let b = TVar (gensym ()) in
+      let t1, c1 =
+        let ctxt = Env.add f ([], TFun (a, b)) ctxt in
+        let ctxt = Env.add x ([], a) ctxt in
+        type_of' ctxt e1
+      in
+      let t2, c2 =
+        let ctxt = Env.add f ([], TFun (a, b)) ctxt in
+        type_of' ctxt e2
+      in
+      ( t2
+      , (b, t1) :: c1 @ c2
+      )
+    | Var x ->
+      let bnd_vars, t = Env.find x ctxt in
+      let rec instantiate bnd_vars t =
+        match bnd_vars with
+        | [] -> t
+        | x :: bnd_vars ->
+          let b = TVar (gensym ()) in
+          instantiate bnd_vars (ty_subst b x t)
+      in
+      ( instantiate bnd_vars t
+      , []
+      )
+  in go e
 
 let type_of e =
-  let t, c = type_of Env.empty e in
-  let t = unify (c @ [TVar "_out", t]) in
-  match t with
-  | Some t -> Some (VarSet.to_list (fvs t), t)
+  let t, c = type_of' Env.empty e in (* constraint-based inference *)
+  let t' = unify (c @ [TVar "$_out", t]) in (* unification *)
+  match t' with
   | None -> None
+  | Some t' -> Some (VarSet.to_list (fvs t'), t') (* generalization *)
 
 let eval =
   let rec eval env =
@@ -168,7 +175,7 @@ let string_of_ty_scheme (fvs, t) =
   in
   let rec go = function
     | TInt -> "int"
-    | TBool -> "bool"
+    | TBool -> "Bool"
     | TVar x -> x
     | TFun (TFun (t1, t2), t) -> "(" ^ go (TFun (t1, t2)) ^ ") -> " ^ go t
     | TFun (t1, t2) -> go t1 ^ " -> " ^ go t2
