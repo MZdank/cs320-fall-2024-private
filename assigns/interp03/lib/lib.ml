@@ -1,7 +1,55 @@
 open Utils
 include My_parser
 
-let unify _ _ = assert false
+let rec ty_subst t x ty =
+  match ty with
+  | TUnit -> TUnit
+  | TInt -> TInt
+  | TFloat -> TFloat
+  | TBool -> TBool
+  | TVar y -> if x = y then t else TVar y
+  | TList t1 -> TList (ty_subst t x t1)
+  | TOption t1 -> TOption (ty_subst t x t1)
+  | TPair (t1, t2) -> TPair (ty_subst t x t1, ty_subst t x t2)
+  | TFun (t1, t2) -> TFun (ty_subst t x t1, ty_subst t x t2)
+
+let ty_subst_c t x (t1, t2) =
+  (ty_subst t x t1, ty_subst t x t2)
+
+let ty_subst_cs t x constraints =
+  List.map (ty_subst_c t x) constraints
+
+let rec fvs = function
+  | TUnit -> VarSet.empty
+  | TInt -> VarSet.empty
+  | TFloat -> VarSet.empty
+  | TBool -> VarSet.empty
+  | TVar x -> VarSet.of_list [x]
+  | TList t -> fvs t
+  | TOption t -> fvs t
+  | TPair (t1, t2) -> VarSet.union (fvs t1) (fvs t2)
+  | TFun (t1, t2) -> VarSet.union (fvs t1) (fvs t2)
+
+  let unify init_ty constraints =
+    let rec go = function
+      | [] -> Some init_ty (* No constraints left, return the god type *)
+      | (t1, t2) :: cs when t1 = t2 ->
+          go cs (* Types are equal, skip this constraint *)
+      | (TFun (in1, out1), TFun (in2, out2)) :: cs ->
+          go ((in1, in2) :: (out1, out2) :: cs) (* Decompose function types *)
+      | (TVar x, t) :: cs ->
+          if VarSet.mem x (fvs t) then
+            None (* Occurs check: can't unify x with a type that includes x *)
+          else
+            (* Substitute x with t in the remaining constraints and continue *)
+            let cs' = ty_subst_cs t x cs in
+            go cs'
+      | (t, TVar x) :: cs ->
+          go ((TVar x, t) :: cs) (* Swap order for symmetry *)
+      | _ -> None (* Unification failed for incompatible types *)
+    in
+    go constraints
+  
 
 let type_of _ _ = assert false
 
