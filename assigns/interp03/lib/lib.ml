@@ -32,23 +32,24 @@ let rec fvs = function
 
   let unify init_ty constraints =
     let rec go = function
-      | [] -> Some init_ty (* No constraints left, return the god type *)
-      | (t1, t2) :: cs when t1 = t2 ->
-          go cs (* Types are equal, skip this constraint *)
+      | [] -> Some init_ty (* base case *)
+      | [TVar "_out", t] -> Some t 
+      | (t1, t2) :: cs when t1 = t2 -> go cs
       | (TFun (in1, out1), TFun (in2, out2)) :: cs ->
-          go ((in1, in2) :: (out1, out2) :: cs) (* Decompose function types *)
+          go ((in1, in2) :: (out1, out2) :: cs) 
       | (TVar x, t) :: cs ->
           if VarSet.mem x (fvs t) then
-            None (* Occurs check: can't unify x with a type that includes x *)
+            None 
           else
-            (* Substitute x with t in the remaining constraints and continue *)
-            let cs' = ty_subst_cs t x cs in
-            go cs'
-      | (t, TVar x) :: cs ->
-          go ((TVar x, t) :: cs) (* Swap order for symmetry *)
-      | _ -> None (* Unification failed for incompatible types *)
-    in
-    go constraints
+            go (ty_subst_cs t x cs)
+      | (t, TVar x) :: cs -> go ((TVar x, t) :: cs)
+      | _ -> None 
+  in
+  match go constraints with
+  | Some unified_ty ->
+      let free_vars = VarSet.to_list (fvs unified_ty) in
+      Some (Forall (free_vars, unified_ty))
+  | None -> None
   
 
 let type_of _ _ = assert false
